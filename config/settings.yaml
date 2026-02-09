@@ -1,0 +1,46 @@
+# Configuration de l'agent de copywriting
+# ==========================================
+
+# LLM Settings
+llm:
+  # Provider: "anthropic" ou "openai"
+  provider: "anthropic"
+  # Modèle à utiliser
+  model: "claude-sonnet-4-20250514"
+  # Tokens max par appel
+  max_tokens: 4096
+  # Température (0.0 = déterministe, 1.0 = créatif)
+  temperature: 0.7
+
+# Defaults pour la génération
+defaults:
+  content_type: "article"
+  persona: "expert_b2b"
+  language: "fr"
+  word_count: 1500
+
+# SEO Settings
+seo:
+  # Densité de mots-clés cible (%)
+  target_keyword_density_min: 1.0
+  target_keyword_density_max: 2.5
+  # Longueur meta description
+  meta_description_min: 140
+  meta_description_max: 160
+  # Longueur titre
+  title_min_length: 50
+  title_max_length: 70
+
+# Lisibilité
+readability:
+  # Longueur moyenne de phrase cible (mots)
+  target_sentence_length: 18
+  # Maximum mots par paragraphe
+  max_paragraph_words: 80
+
+# Output
+output:
+  directory: "output"
+  format: "markdown"
+  include_metadata: true
+  include_analysis: true

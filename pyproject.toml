@@ -1,0 +1,38 @@
+[project]
+name = "copywriting-agent"
+version = "0.1.0"
+description = "Agent de copywriting IA pour générer des articles, blogs et use cases de qualité"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+
+dependencies = [
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+anthropic = ["anthropic>=0.40.0"]
+openai = ["openai>=1.50.0"]
+all = [
+    "anthropic>=0.40.0",
+    "openai>=1.50.0",
+]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+    "ruff>=0.8.0",
+]
+
+[project.scripts]
+copywriter = "main:main"
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
