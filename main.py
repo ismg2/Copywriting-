@@ -4,18 +4,27 @@ Copywriting Agent - Point d'entrée CLI.
 
 Usage:
     python main.py write --topic "Sujet" --type article --persona expert_b2b
+    python main.py write --topic "Sujet" --provider ollama --model mistral
     python main.py list-personas
     python main.py list-types
+    python main.py list-models
     python main.py analyze --file output/mon-article.md --keywords "mot1,mot2"
 """
 
 import argparse
 import asyncio
 import json
+import os
 import sys
 
 from src.agent.writer import CopywritingAgent
 from src.agent.personas import PERSONAS
+from src.agent.llm_clients import (
+    LLMConfig,
+    OllamaClient,
+    create_llm_client,
+    auto_detect_client,
+)
 from src.tools.seo import SEOAnalyzer
 from src.tools.readability import ReadabilityAnalyzer
 from src.tools.keywords import KeywordExtractor
@@ -27,11 +36,42 @@ def create_parser() -> argparse.ArgumentParser:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Exemples:
+  # Avec Ollama (local, sans clé API)
+  %(prog)s write --topic "L'IA dans le marketing" --provider ollama --model mistral
+  %(prog)s write --topic "Guide SEO" -T blog --provider ollama --model llama3.1
+
+  # Avec Anthropic / OpenAI
+  %(prog)s write --topic "Migration cloud" --provider anthropic --model claude-sonnet-4-20250514
+  %(prog)s write --topic "Migration cloud" --provider openai --model gpt-4
+
+  # Auto-détection (Ollama > Anthropic > OpenAI)
   %(prog)s write --topic "L'IA dans le marketing" --type blog --persona blog_casual
-  %(prog)s write --topic "Migration cloud" --type usecase --keywords "cloud,migration,AWS"
+
+  # Autres commandes
+  %(prog)s list-models                          # Voir les modèles Ollama disponibles
+  %(prog)s list-models --ollama-url http://server:11434
   %(prog)s list-personas
   %(prog)s analyze --file output/article.md --keywords "IA,marketing"
         """,
+    )
+
+    # Options globales LLM
+    llm_group = parser.add_argument_group("LLM Provider")
+    llm_group.add_argument(
+        "--provider",
+        choices=["ollama", "anthropic", "openai", "auto"],
+        default="auto",
+        help="Provider LLM (default: auto — détecte Ollama, puis Anthropic, puis OpenAI)",
+    )
+    llm_group.add_argument(
+        "--model", "-m",
+        default="",
+        help="Modèle à utiliser (ex: mistral, llama3.1, claude-sonnet-4-20250514, gpt-4)",
+    )
+    llm_group.add_argument(
+        "--ollama-url",
+        default="http://localhost:11434",
+        help="URL du serveur Ollama (default: http://localhost:11434)",
     )
 
     subparsers = parser.add_subparsers(dest="command", help="Commande à exécuter")
@@ -96,6 +136,9 @@ Exemples:
     # --- Commande: list-types ---
     subparsers.add_parser("list-types", help="Lister les types de contenu")
 
+    # --- Commande: list-models ---
+    subparsers.add_parser("list-models", help="Lister les modèles Ollama disponibles")
+
     # --- Commande: analyze ---
     analyze_parser = subparsers.add_parser("analyze", help="Analyser un contenu existant")
     analyze_parser.add_argument("--file", "-f", required=True, help="Fichier Markdown à analyser")
@@ -129,6 +172,43 @@ def cmd_list_types():
     }
     for key, desc in types.items():
         print(f"  {key:10s} | {desc}")
+    print()
+
+
+def cmd_list_models(args):
+    """Liste les modèles disponibles dans Ollama."""
+    client = OllamaClient(base_url=args.ollama_url)
+
+    print(f"\n=== Modèles Ollama ({args.ollama_url}) ===\n")
+
+    if not client.is_available():
+        print("  Ollama n'est pas accessible.")
+        print(f"  Vérifiez qu'Ollama est lancé : ollama serve")
+        print(f"  URL testée : {args.ollama_url}")
+        print()
+        sys.exit(1)
+
+    try:
+        models = client.list_models()
+    except ConnectionError as e:
+        print(f"  Erreur: {e}")
+        sys.exit(1)
+
+    if not models:
+        print("  Aucun modèle installé.")
+        print("  Installez un modèle : ollama pull llama3.1")
+        print()
+        return
+
+    for model in models:
+        name = model.get("name", "?")
+        size = model.get("size", 0)
+        size_gb = size / (1024 ** 3) if size else 0
+        modified = model.get("modified_at", "")[:10]
+        print(f"  {name:30s}  {size_gb:5.1f} GB  {modified}")
+
+    print(f"\n  Total: {len(models)} modèle(s)")
+    print(f"\n  Usage: python main.py --provider ollama --model <nom> write -t \"Sujet\"")
     print()
 
 
@@ -186,14 +266,50 @@ def cmd_analyze(args):
     print()
 
 
+def _resolve_llm_client(args):
+    """Résout le client LLM selon les arguments CLI."""
+    provider = args.provider
+
+    # Mode auto-détection
+    if provider == "auto":
+        client, detected = auto_detect_client()
+        return client, detected
+
+    # Déterminer le modèle par défaut selon le provider
+    default_models = {
+        "ollama": "llama3.1",
+        "anthropic": "claude-sonnet-4-20250514",
+        "openai": "gpt-4",
+    }
+    model = args.model or default_models.get(provider, "")
+
+    config = LLMConfig(
+        provider=provider,
+        model=model,
+        base_url=args.ollama_url if provider == "ollama" else "",
+        api_key=os.environ.get(
+            "ANTHROPIC_API_KEY" if provider == "anthropic" else "OPENAI_API_KEY", ""
+        ),
+    )
+
+    try:
+        client = create_llm_client(config)
+        return client, provider
+    except (ValueError, ImportError) as e:
+        print(f"Erreur: {e}")
+        return None, None
+
+
 async def cmd_write(args):
     """Génère un nouveau contenu."""
     keywords = [k.strip() for k in args.keywords.split(",") if k.strip()]
 
-    # Tenter de charger un client LLM
-    llm_client = _load_llm_client()
+    # Résoudre le client LLM
+    llm_client, provider_name = _resolve_llm_client(args)
 
     agent = CopywritingAgent(llm_client=llm_client, output_dir=args.output_dir)
+
+    model_name = getattr(llm_client, "model", "?") if llm_client else "none"
 
     print(f"\n=== Génération de contenu ===")
     print(f"  Sujet: {args.topic}")
@@ -202,12 +318,16 @@ async def cmd_write(args):
     print(f"  Mots-clés: {keywords or 'aucun'}")
     print(f"  Mots cible: {args.words}")
     print(f"  Langue: {args.language}")
+    print(f"  Provider: {provider_name or 'aucun'}")
+    print(f"  Modèle: {model_name}")
     print()
 
     if llm_client is None:
-        print("Note: Aucun client LLM configuré.")
-        print("Configurez ANTHROPIC_API_KEY ou OPENAI_API_KEY dans votre environnement.")
-        print("Le pipeline sera exécuté en mode 'dry run' (prompts générés sans appel LLM).\n")
+        print("Aucun LLM détecté. Options :")
+        print("  1. Lancez Ollama : ollama serve  (puis ollama pull llama3.1)")
+        print("  2. Ou : export ANTHROPIC_API_KEY=sk-ant-...")
+        print("  3. Ou : export OPENAI_API_KEY=sk-...")
+        print("Le pipeline sera exécuté en mode 'dry run'.\n")
 
     result = await agent.write(
         topic=args.topic,
@@ -233,31 +353,6 @@ async def cmd_write(args):
         print(f"\nSauvegardé dans: {result['saved_to']}")
 
 
-def _load_llm_client():
-    """Tente de charger un client LLM depuis l'environnement."""
-    import os
-
-    # Anthropic
-    api_key = os.environ.get("ANTHROPIC_API_KEY")
-    if api_key:
-        try:
-            import anthropic
-            return anthropic.Anthropic(api_key=api_key)
-        except ImportError:
-            print("Warning: anthropic package non installé. pip install anthropic")
-
-    # OpenAI
-    api_key = os.environ.get("OPENAI_API_KEY")
-    if api_key:
-        try:
-            import openai
-            return openai.OpenAI(api_key=api_key)
-        except ImportError:
-            print("Warning: openai package non installé. pip install openai")
-
-    return None
-
-
 def main():
     parser = create_parser()
     args = parser.parse_args()
@@ -270,6 +365,8 @@ def main():
         cmd_list_personas()
     elif args.command == "list-types":
         cmd_list_types()
+    elif args.command == "list-models":
+        cmd_list_models(args)
     elif args.command == "analyze":
         cmd_analyze(args)
     elif args.command == "write":

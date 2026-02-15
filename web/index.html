@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Copywriting Agent</title>
+    <style>
+        :root {
+            --bg: #0f1117;
+            --surface: #1a1d27;
+            --surface-hover: #232736;
+            --border: #2d3148;
+            --text: #e4e6f0;
+            --text-muted: #8b8fa8;
+            --accent: #6c5ce7;
+            --accent-hover: #7d6ff0;
+            --accent-soft: rgba(108, 92, 231, 0.15);
+            --success: #00b894;
+            --warning: #fdcb6e;
+            --error: #e17055;
+            --radius: 12px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        /* --- Header --- */
+        header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 16px 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        header h1 {
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+        header h1 span { color: var(--accent); }
+        .status-badge {
+            font-size: 12px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-weight: 500;
+        }
+        .status-badge.connected { background: rgba(0,184,148,0.15); color: var(--success); }
+        .status-badge.disconnected { background: rgba(225,112,85,0.15); color: var(--error); }
+
+        /* --- Layout --- */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 32px;
+        }
+
+        /* --- Tabs --- */
+        .tabs {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 32px;
+            background: var(--surface);
+            border-radius: var(--radius);
+            padding: 4px;
+        }
+        .tab {
+            flex: 1;
+            padding: 12px 20px;
+            text-align: center;
+            border: none;
+            background: none;
+            color: var(--text-muted);
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+        .tab:hover { color: var(--text); background: var(--surface-hover); }
+        .tab.active { background: var(--accent); color: white; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* --- Cards --- */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+        .card h2 {
+            font-size: 16px;
+            margin-bottom: 4px;
+            font-weight: 600;
+        }
+        .card .subtitle {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 20px;
+        }
+
+        /* --- Form elements --- */
+        label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+        input[type="text"], textarea, select {
+            width: 100%;
+            padding: 10px 14px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-size: 14px;
+            font-family: inherit;
+            transition: border-color 0.2s;
+        }
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+        textarea { resize: vertical; min-height: 100px; }
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+        .form-group { margin-bottom: 16px; }
+
+        /* --- Persona picker --- */
+        .persona-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .persona-card {
+            padding: 14px;
+            background: var(--bg);
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .persona-card:hover { border-color: var(--accent); background: var(--surface-hover); }
+        .persona-card.selected { border-color: var(--accent); background: var(--accent-soft); }
+        .persona-card .persona-name {
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+        .persona-card .persona-tone {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        /* --- Content type picker --- */
+        .type-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .type-card {
+            padding: 20px;
+            background: var(--bg);
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+        }
+        .type-card:hover { border-color: var(--accent); }
+        .type-card.selected { border-color: var(--accent); background: var(--accent-soft); }
+        .type-card .type-icon { font-size: 28px; margin-bottom: 8px; }
+        .type-card .type-name { font-weight: 600; font-size: 15px; }
+        .type-card .type-desc { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+
+        /* --- Buttons --- */
+        .btn {
+            padding: 12px 28px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+        .btn-primary:hover { background: var(--accent-hover); }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-secondary {
+            background: var(--surface-hover);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+        .btn-secondary:hover { background: var(--border); }
+
+        /* --- Steps indicator --- */
+        .steps {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            margin-bottom: 32px;
+        }
+        .step {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            font-size: 13px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+        .step .step-num {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 700;
+        }
+        .step.active .step-num { background: var(--accent); color: white; }
+        .step.active { color: var(--text); }
+        .step.done .step-num { background: var(--success); color: white; }
+        .step-line {
+            flex: 1;
+            height: 2px;
+            background: var(--border);
+            min-width: 20px;
+        }
+        .step-line.done { background: var(--success); }
+
+        /* --- Progress bar --- */
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: var(--border);
+            border-radius: 2px;
+            margin: 16px 0;
+            overflow: hidden;
+        }
+        .progress-bar .fill {
+            height: 100%;
+            background: var(--accent);
+            border-radius: 2px;
+            transition: width 0.5s ease;
+            width: 0%;
+        }
+
+        /* --- Result area --- */
+        .result-content {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 24px;
+            white-space: pre-wrap;
+            font-size: 14px;
+            line-height: 1.8;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        .scores {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .score-card {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 16px;
+            text-align: center;
+        }
+        .score-card .score-value {
+            font-size: 28px;
+            font-weight: 700;
+        }
+        .score-card .score-label {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+        .score-good { color: var(--success); }
+        .score-warn { color: var(--warning); }
+        .score-bad { color: var(--error); }
+
+        /* --- Loading --- */
+        .loading { display: none; text-align: center; padding: 40px; }
+        .loading.active { display: block; }
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 16px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* --- Slider --- */
+        input[type="range"] {
+            width: 100%;
+            appearance: none;
+            height: 6px;
+            background: var(--border);
+            border-radius: 3px;
+            outline: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            background: var(--accent);
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        .range-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        /* --- Footer --- */
+        .actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 24px;
+        }
+
+        /* --- Analyze tab --- */
+        .analyze-input {
+            min-height: 200px;
+        }
+        .check-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 13px;
+        }
+        .check-icon { font-size: 16px; }
+        .check-pass .check-icon { color: var(--success); }
+        .check-warn .check-icon { color: var(--warning); }
+        .check-fail .check-icon { color: var(--error); }
+
+        @media (max-width: 768px) {
+            .form-row, .persona-grid, .type-grid, .scores {
+                grid-template-columns: 1fr;
+            }
+            .steps { flex-wrap: wrap; }
+            .container { padding: 16px; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1><span>Copywriting</span> Agent</h1>
+    <div id="status-badge" class="status-badge disconnected">Chargement...</div>
+</header>
+
+<div class="container">
+
+    <!-- Tabs -->
+    <div class="tabs">
+        <button class="tab active" onclick="switchTab('write')">Rédiger</button>
+        <button class="tab" onclick="switchTab('analyze')">Analyser</button>
+    </div>
+
+    <!-- ===== TAB: WRITE ===== -->
+    <div id="tab-write" class="tab-content active">
+
+        <!-- Steps indicator -->
+        <div class="steps" id="steps">
+            <div class="step active" data-step="1"><span class="step-num">1</span> Type</div>
+            <div class="step-line"></div>
+            <div class="step" data-step="2"><span class="step-num">2</span> Sujet</div>
+            <div class="step-line"></div>
+            <div class="step" data-step="3"><span class="step-num">3</span> Persona</div>
+            <div class="step-line"></div>
+            <div class="step" data-step="4"><span class="step-num">4</span> Options</div>
+            <div class="step-line"></div>
+            <div class="step" data-step="5"><span class="step-num">5</span> Résultat</div>
+        </div>
+
+        <!-- Step 1: Content Type -->
+        <div id="step-1" class="step-panel">
+            <div class="card">
+                <h2>Quel type de contenu voulez-vous créer ?</h2>
+                <p class="subtitle">Choisissez le format qui correspond à votre besoin</p>
+                <div class="type-grid">
+                    <div class="type-card selected" data-type="article" onclick="selectType(this)">
+                        <div class="type-icon">&#x1f4f0;</div>
+                        <div class="type-name">Article</div>
+                        <div class="type-desc">Article de fond, analyse approfondie, guide expert</div>
+                    </div>
+                    <div class="type-card" data-type="blog" onclick="selectType(this)">
+                        <div class="type-icon">&#x270d;&#xfe0f;</div>
+                        <div class="type-name">Blog Post</div>
+                        <div class="type-desc">Contenu engageant, conversationnel, facile à lire</div>
+                    </div>
+                    <div class="type-card" data-type="usecase" onclick="selectType(this)">
+                        <div class="type-icon">&#x1f4ca;</div>
+                        <div class="type-name">Use Case</div>
+                        <div class="type-desc">Étude de cas : Problème, Solution, Résultat</div>
+                    </div>
+                </div>
+                <div class="actions">
+                    <div></div>
+                    <button class="btn btn-primary" onclick="goToStep(2)">Suivant</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 2: Topic -->
+        <div id="step-2" class="step-panel" style="display:none">
+            <div class="card">
+                <h2>Quel est votre sujet ?</h2>
+                <p class="subtitle">Décrivez le sujet de votre contenu le plus précisément possible</p>
+                <div class="form-group">
+                    <label for="topic">Sujet principal *</label>
+                    <input type="text" id="topic" placeholder="Ex: Comment l'IA transforme le marketing digital en 2025" autofocus>
+                </div>
+                <div class="form-group">
+                    <label for="keywords">Mots-clés SEO (séparés par des virgules)</label>
+                    <input type="text" id="keywords" placeholder="Ex: IA, marketing digital, automatisation, ROI">
+                </div>
+                <div class="form-group">
+                    <label for="instructions">Instructions spécifiques (optionnel)</label>
+                    <textarea id="instructions" rows="3" placeholder="Ex: Focus sur les PME, inclure des exemples français, ton pragmatique..."></textarea>
+                </div>
+                <div class="actions">
+                    <button class="btn btn-secondary" onclick="goToStep(1)">Retour</button>
+                    <button class="btn btn-primary" onclick="goToStep(3)">Suivant</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 3: Persona -->
+        <div id="step-3" class="step-panel" style="display:none">
+            <div class="card">
+                <h2>Quel ton souhaitez-vous ?</h2>
+                <p class="subtitle">Choisissez le style de rédaction qui correspond à votre audience</p>
+                <div class="persona-grid" id="persona-grid">
+                    <!-- Rempli dynamiquement par JS -->
+                </div>
+                <div class="actions">
+                    <button class="btn btn-secondary" onclick="goToStep(2)">Retour</button>
+                    <button class="btn btn-primary" onclick="goToStep(4)">Suivant</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 4: Options -->
+        <div id="step-4" class="step-panel" style="display:none">
+            <div class="card">
+                <h2>Options de génération</h2>
+                <p class="subtitle">Ajustez les paramètres selon vos besoins</p>
+
+                <div class="form-group">
+                    <label>Nombre de mots cible : <strong id="word-count-display">1500</strong></label>
+                    <input type="range" id="word-count" min="500" max="5000" step="100" value="1500" oninput="updateWordCount(this.value)">
+                    <div class="range-labels">
+                        <span>500 (court)</span>
+                        <span>1500 (standard)</span>
+                        <span>3000 (long)</span>
+                        <span>5000 (très long)</span>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="language">Langue</label>
+                        <select id="language">
+                            <option value="fr" selected>Français</option>
+                            <option value="en">English</option>
+                            <option value="es">Español</option>
+                            <option value="de">Deutsch</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Provider LLM</label>
+                        <div id="provider-info" style="padding: 10px 14px; background: var(--bg); border-radius: 8px; font-size: 14px; border: 1px solid var(--border);">
+                            Chargement...
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recap -->
+                <div style="background: var(--bg); border-radius: 8px; padding: 16px; margin-top: 8px; border: 1px solid var(--border);">
+                    <div style="font-size: 13px; font-weight: 600; margin-bottom: 8px; color: var(--accent);">Récapitulatif</div>
+                    <div id="recap" style="font-size: 13px; color: var(--text-muted); line-height: 1.8;"></div>
+                </div>
+
+                <div class="actions">
+                    <button class="btn btn-secondary" onclick="goToStep(3)">Retour</button>
+                    <button class="btn btn-primary" id="btn-generate" onclick="generate()">Générer le contenu</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 5: Result -->
+        <div id="step-5" class="step-panel" style="display:none">
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <div style="font-weight: 600; margin-bottom: 8px;">Rédaction en cours...</div>
+                <div style="font-size: 13px; color: var(--text-muted);" id="loading-stage">Recherche et analyse du sujet</div>
+                <div class="progress-bar"><div class="fill" id="progress-fill"></div></div>
+            </div>
+
+            <div id="result-area" style="display:none">
+                <div class="card">
+                    <h2>Contenu généré</h2>
+                    <p class="subtitle" id="result-meta"></p>
+
+                    <div class="scores" id="scores"></div>
+                    <div class="result-content" id="result-content"></div>
+
+                    <div class="actions" style="margin-top: 20px;">
+                        <button class="btn btn-secondary" onclick="goToStep(1)">Nouveau contenu</button>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="btn btn-secondary" onclick="copyContent()">Copier</button>
+                            <button class="btn btn-primary" onclick="downloadContent()">Télécharger .md</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== TAB: ANALYZE ===== -->
+    <div id="tab-analyze" class="tab-content">
+        <div class="card">
+            <h2>Analyser un contenu existant</h2>
+            <p class="subtitle">Collez votre texte pour obtenir un score SEO, lisibilité et des recommandations</p>
+            <div class="form-group">
+                <label for="analyze-text">Contenu à analyser</label>
+                <textarea id="analyze-text" class="analyze-input" placeholder="Collez votre article, blog ou texte ici..."></textarea>
+            </div>
+            <div class="form-group">
+                <label for="analyze-keywords">Mots-clés cibles (optionnel)</label>
+                <input type="text" id="analyze-keywords" placeholder="Ex: marketing, IA, digital">
+            </div>
+            <div class="actions">
+                <div></div>
+                <button class="btn btn-primary" onclick="analyzeContent()">Analyser</button>
+            </div>
+        </div>
+
+        <div id="analyze-loading" class="loading">
+            <div class="spinner"></div>
+            <div>Analyse en cours...</div>
+        </div>
+
+        <div id="analyze-result" style="display:none">
+            <div class="card">
+                <h2>Résultats de l'analyse</h2>
+                <div class="scores" id="analyze-scores"></div>
+                <div id="analyze-checks"></div>
+                <div id="analyze-keywords-result" style="margin-top: 16px;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// --- State ---
+const state = {
+    contentType: 'article',
+    persona: 'expert_b2b',
+    currentStep: 1,
+    serverStatus: null,
+    generatedContent: '',
+};
+
+// --- Init ---
+document.addEventListener('DOMContentLoaded', async () => {
+    await loadStatus();
+    await loadPersonas();
+});
+
+async function loadStatus() {
+    try {
+        const res = await fetch('/api/status');
+        state.serverStatus = await res.json();
+        const badge = document.getElementById('status-badge');
+        if (state.serverStatus.llm_available) {
+            badge.textContent = `${state.serverStatus.provider} : ${state.serverStatus.model}`;
+            badge.className = 'status-badge connected';
+        } else {
+            badge.textContent = 'LLM non connecté (dry run)';
+            badge.className = 'status-badge disconnected';
+        }
+        document.getElementById('provider-info').textContent =
+            state.serverStatus.llm_available
+                ? `${state.serverStatus.provider} / ${state.serverStatus.model}`
+                : 'Aucun LLM (mode dry run)';
+    } catch(e) {
+        document.getElementById('status-badge').textContent = 'Serveur inaccessible';
+    }
+}
+
+async function loadPersonas() {
+    try {
+        const res = await fetch('/api/personas');
+        const personas = await res.json();
+        const grid = document.getElementById('persona-grid');
+        grid.innerHTML = '';
+        for (const [key, p] of Object.entries(personas)) {
+            const selected = key === state.persona ? 'selected' : '';
+            grid.innerHTML += `
+                <div class="persona-card ${selected}" data-persona="${key}" onclick="selectPersona(this)">
+                    <div class="persona-name">${p.name}</div>
+                    <div class="persona-tone">${p.tone}</div>
+                    <div style="font-size:11px; color: var(--text-muted); margin-top:4px;">Audience: ${p.target_audience}</div>
+                </div>`;
+        }
+    } catch(e) {
+        console.error('Erreur chargement personas', e);
+    }
+}
+
+// --- Navigation ---
+function switchTab(tab) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.querySelector(`.tab-content#tab-${tab}`).classList.add('active');
+    event.target.classList.add('active');
+}
+
+function goToStep(n) {
+    // Validation step 2
+    if (n > 2 && !document.getElementById('topic').value.trim()) {
+        document.getElementById('topic').focus();
+        document.getElementById('topic').style.borderColor = 'var(--error)';
+        setTimeout(() => document.getElementById('topic').style.borderColor = '', 2000);
+        return;
+    }
+
+    state.currentStep = n;
+    document.querySelectorAll('.step-panel').forEach(p => p.style.display = 'none');
+    document.getElementById(`step-${n}`).style.display = 'block';
+
+    // Update step indicators
+    document.querySelectorAll('.step').forEach(s => {
+        const sn = parseInt(s.dataset.step);
+        s.classList.remove('active', 'done');
+        if (sn === n) s.classList.add('active');
+        else if (sn < n) s.classList.add('done');
+    });
+    document.querySelectorAll('.step-line').forEach((line, i) => {
+        line.classList.toggle('done', i < n - 1);
+    });
+
+    if (n === 4) updateRecap();
+}
+
+// --- Selection ---
+function selectType(el) {
+    document.querySelectorAll('.type-card').forEach(c => c.classList.remove('selected'));
+    el.classList.add('selected');
+    state.contentType = el.dataset.type;
+}
+
+function selectPersona(el) {
+    document.querySelectorAll('.persona-card').forEach(c => c.classList.remove('selected'));
+    el.classList.add('selected');
+    state.persona = el.dataset.persona;
+}
+
+function updateWordCount(val) {
+    document.getElementById('word-count-display').textContent = val;
+}
+
+function updateRecap() {
+    const typeNames = { article: 'Article', blog: 'Blog Post', usecase: 'Use Case' };
+    const topic = document.getElementById('topic').value;
+    const keywords = document.getElementById('keywords').value;
+    const wordCount = document.getElementById('word-count').value;
+    const lang = document.getElementById('language').value;
+    const personaEl = document.querySelector('.persona-card.selected');
+    const personaName = personaEl ? personaEl.querySelector('.persona-name').textContent : state.persona;
+
+    document.getElementById('recap').innerHTML = `
+        <strong>Type :</strong> ${typeNames[state.contentType]}<br>
+        <strong>Sujet :</strong> ${topic}<br>
+        <strong>Persona :</strong> ${personaName}<br>
+        <strong>Mots-clés :</strong> ${keywords || 'aucun'}<br>
+        <strong>Mots cible :</strong> ${wordCount}<br>
+        <strong>Langue :</strong> ${lang.toUpperCase()}
+    `;
+}
+
+// --- Generate ---
+async function generate() {
+    const btn = document.getElementById('btn-generate');
+    btn.disabled = true;
+    goToStep(5);
+
+    const loading = document.getElementById('loading');
+    const resultArea = document.getElementById('result-area');
+    loading.classList.add('active');
+    resultArea.style.display = 'none';
+
+    // Simulate progress
+    const stages = [
+        'Recherche et analyse du sujet',
+        'Construction du plan structuré',
+        'Rédaction du brouillon',
+        'Révision et amélioration',
+        'Finalisation et optimisation SEO',
+    ];
+    let stageIndex = 0;
+    const progressInterval = setInterval(() => {
+        stageIndex = Math.min(stageIndex + 1, stages.length - 1);
+        document.getElementById('loading-stage').textContent = stages[stageIndex];
+        document.getElementById('progress-fill').style.width = `${((stageIndex + 1) / stages.length) * 90}%`;
+    }, 3000);
+
+    const payload = {
+        topic: document.getElementById('topic').value,
+        content_type: state.contentType,
+        persona: state.persona,
+        keywords: document.getElementById('keywords').value,
+        word_count: document.getElementById('word-count').value,
+        language: document.getElementById('language').value,
+        instructions: document.getElementById('instructions').value,
+    };
+
+    try {
+        const res = await fetch('/api/write', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+
+        clearInterval(progressInterval);
+        document.getElementById('progress-fill').style.width = '100%';
+
+        setTimeout(() => {
+            loading.classList.remove('active');
+            resultArea.style.display = 'block';
+
+            if (data.error) {
+                document.getElementById('result-content').textContent = `Erreur: ${data.error}`;
+                return;
+            }
+
+            state.generatedContent = data.content || '';
+            document.getElementById('result-content').textContent = state.generatedContent;
+
+            const meta = data.metadata || {};
+            document.getElementById('result-meta').textContent =
+                `${meta.word_count || '?'} mots | ~${meta.reading_time_minutes || '?'} min de lecture | ${meta.content_type || ''} | ${meta.persona || ''}`;
+
+            const analysis = data.analysis || {};
+            const scoresEl = document.getElementById('scores');
+            scoresEl.innerHTML = `
+                ${scoreCard('SEO', analysis.seo_score, 100)}
+                ${scoreCard('Lisibilité', analysis.readability_score, 100)}
+                ${scoreCard('Mots', analysis.word_count, null)}
+                ${scoreCard('Lecture', analysis.reading_time, null, ' min')}
+            `;
+
+            if (data.saved_to) {
+                document.getElementById('result-meta').textContent += ` | Sauvegardé: ${data.saved_to}`;
+            }
+        }, 500);
+
+    } catch(e) {
+        clearInterval(progressInterval);
+        loading.classList.remove('active');
+        resultArea.style.display = 'block';
+        document.getElementById('result-content').textContent = `Erreur de connexion: ${e.message}`;
+    }
+
+    btn.disabled = false;
+}
+
+function scoreCard(label, value, max, suffix = '') {
+    if (value == null) return '';
+    let cls = '';
+    if (max) {
+        if (value >= max * 0.7) cls = 'score-good';
+        else if (value >= max * 0.4) cls = 'score-warn';
+        else cls = 'score-bad';
+    }
+    const display = max ? `${value}/${max}` : `${value}${suffix}`;
+    return `<div class="score-card"><div class="score-value ${cls}">${display}</div><div class="score-label">${label}</div></div>`;
+}
+
+// --- Copy / Download ---
+function copyContent() {
+    navigator.clipboard.writeText(state.generatedContent);
+    const btn = event.target;
+    btn.textContent = 'Copié !';
+    setTimeout(() => btn.textContent = 'Copier', 2000);
+}
+
+function downloadContent() {
+    const blob = new Blob([state.generatedContent], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const topic = document.getElementById('topic').value.slice(0, 40).replace(/[^a-zA-Z0-9àâäéèêëïîôùûüÿçœæ ]/g, '').replace(/ /g, '-').toLowerCase();
+    a.download = `${state.contentType}-${topic || 'contenu'}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+// --- Analyze ---
+async function analyzeContent() {
+    const text = document.getElementById('analyze-text').value.trim();
+    if (!text) {
+        document.getElementById('analyze-text').focus();
+        return;
+    }
+
+    document.getElementById('analyze-loading').classList.add('active');
+    document.getElementById('analyze-result').style.display = 'none';
+
+    try {
+        const res = await fetch('/api/analyze', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                content: text,
+                keywords: document.getElementById('analyze-keywords').value,
+            }),
+        });
+        const data = await res.json();
+
+        document.getElementById('analyze-loading').classList.remove('active');
+        document.getElementById('analyze-result').style.display = 'block';
+
+        // Scores
+        const scoresEl = document.getElementById('analyze-scores');
+        const readScore = data.readability?.score || 0;
+        scoresEl.innerHTML = `
+            ${scoreCard('SEO', data.seo_score, 100)}
+            ${scoreCard('Lisibilité', readScore, 100)}
+            ${scoreCard('Mots', data.readability?.metrics?.total_words, null)}
+            ${scoreCard('Phrases', data.readability?.metrics?.total_sentences, null)}
+        `;
+
+        // Checks
+        const checksEl = document.getElementById('analyze-checks');
+        checksEl.innerHTML = '<h3 style="font-size:14px; margin: 16px 0 8px;">Détail SEO</h3>';
+        for (const [name, check] of Object.entries(data.seo_checks || {})) {
+            const icons = { pass: '&#10003;', warn: '&#9888;', fail: '&#10007;', info: '&#8505;' };
+            const cls = `check-${check.status}`;
+            checksEl.innerHTML += `
+                <div class="check-item ${cls}">
+                    <span class="check-icon">${icons[check.status] || '?'}</span>
+                    <strong>${name}</strong>: ${check.message}
+                </div>`;
+        }
+
+        // Recommendations
+        const recs = data.readability?.recommendations || [];
+        if (recs.length) {
+            checksEl.innerHTML += '<h3 style="font-size:14px; margin: 16px 0 8px;">Recommandations</h3>';
+            recs.forEach(r => {
+                checksEl.innerHTML += `<div class="check-item"><span class="check-icon" style="color:var(--accent);">&#8226;</span> ${r}</div>`;
+            });
+        }
+
+        // Top keywords
+        const kwEl = document.getElementById('analyze-keywords-result');
+        const topKw = data.top_keywords || [];
+        if (topKw.length) {
+            kwEl.innerHTML = '<h3 style="font-size:14px; margin-bottom:8px;">Top mots-clés détectés</h3>';
+            kwEl.innerHTML += topKw.map(k => `<span style="display:inline-block; background:var(--accent-soft); color:var(--accent); padding:4px 10px; border-radius:20px; font-size:12px; margin: 2px 4px;">${k.word} (${k.count}x)</span>`).join('');
+        }
+
+    } catch(e) {
+        document.getElementById('analyze-loading').classList.remove('active');
+        document.getElementById('analyze-result').style.display = 'block';
+        document.getElementById('analyze-scores').innerHTML = `<p>Erreur: ${e.message}</p>`;
+    }
+}
+</script>
+</body>
+</html>
