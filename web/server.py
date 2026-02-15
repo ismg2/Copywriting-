@@ -251,7 +251,7 @@ def main():
 ╔══════════════════════════════════════════════════╗
 ║         Copywriting Agent — Interface Web        ║
 ╠══════════════════════════════════════════════════╣
-║  URL:      http://localhost:{args.port:<21s}  ║
+║  URL:      http://localhost:{str(args.port):<21s}  ║
 ║  Provider: {(PROVIDER_NAME or 'aucun'):<37s}  ║
 ║  Modèle:   {model_name:<37s}  ║
 ╚══════════════════════════════════════════════════╝
