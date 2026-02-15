@@ -52,6 +52,7 @@ class CopywritingAgent:
         language: str = "fr",
         instructions: str = "",
         save: bool = True,
+        progress_callback=None,
     ) -> dict[str, Any]:
         """
         Génère un contenu complet via le pipeline.
@@ -90,7 +91,9 @@ class CopywritingAgent:
         )
 
         # Exécuter le pipeline
-        state = await self.pipeline.run_full_pipeline(brief)
+        state = await self.pipeline.run_full_pipeline(
+            brief, on_stage_complete=progress_callback
+        )
 
         # Analyser le résultat
         analysis = self._analyze_content(state.final_content, keywords or [])

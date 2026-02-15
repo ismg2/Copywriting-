@@ -9,9 +9,10 @@ Le pipeline orchestre les 5 étapes de la rédaction :
 5. Polish    - Finalisation, formatage et optimisation SEO
 """
 
+import time
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any
+from typing import Any, Callable
 
 from .personas import Persona
 
@@ -77,15 +78,45 @@ class WritingPipeline:
         self.state = PipelineState(brief=brief)
         return self.state
 
-    async def run_full_pipeline(self, brief: ContentBrief) -> PipelineState:
+    STAGE_NAMES = {
+        PipelineStage.RESEARCH: "Recherche",
+        PipelineStage.OUTLINE: "Plan",
+        PipelineStage.DRAFT: "Rédaction",
+        PipelineStage.EDIT: "Révision",
+        PipelineStage.POLISH: "Finalisation",
+    }
+
+    async def run_full_pipeline(
+        self,
+        brief: ContentBrief,
+        on_stage_complete: Callable[[dict], None] | None = None,
+    ) -> PipelineState:
         """Exécute le pipeline complet de bout en bout."""
         self.create_session(brief)
 
-        await self.research()
-        await self.outline()
-        await self.draft()
-        await self.edit()
-        await self.polish()
+        stages = [
+            (PipelineStage.RESEARCH, self.research),
+            (PipelineStage.OUTLINE, self.outline),
+            (PipelineStage.DRAFT, self.draft),
+            (PipelineStage.EDIT, self.edit),
+            (PipelineStage.POLISH, self.polish),
+        ]
+        total = len(stages)
+        pipeline_start = time.time()
+
+        for i, (stage_enum, stage_fn) in enumerate(stages):
+            stage_start = time.time()
+            await stage_fn()
+            stage_duration = time.time() - stage_start
+
+            if on_stage_complete:
+                on_stage_complete({
+                    "stage": self.STAGE_NAMES[stage_enum],
+                    "stage_index": i,
+                    "total_stages": total,
+                    "stage_duration": round(stage_duration, 1),
+                    "elapsed": round(time.time() - pipeline_start, 1),
+                })
 
         return self.state
 

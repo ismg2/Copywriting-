@@ -15,6 +15,7 @@ import argparse
 import asyncio
 import json
 import os
+import queue
 import sys
 import threading
 from http.server import HTTPServer, SimpleHTTPRequestHandler
@@ -89,7 +90,7 @@ class CopywritingHandler(SimpleHTTPRequestHandler):
         self._json_response({"error": "Endpoint inconnu"}, status=404)
 
     def _handle_write(self, data):
-        """Génère du contenu via le pipeline."""
+        """Génère du contenu via le pipeline avec streaming SSE."""
         topic = data.get("topic", "").strip()
         if not topic:
             return self._json_response({"error": "Le sujet est requis"}, status=400)
@@ -101,22 +102,54 @@ class CopywritingHandler(SimpleHTTPRequestHandler):
         language = data.get("language", "fr")
         instructions = data.get("instructions", "")
 
-        agent = CopywritingAgent(llm_client=LLM_CLIENT, output_dir=str(ROOT_DIR / "output"))
+        # SSE headers
+        self.send_response(200)
+        self.send_header("Content-Type", "text/event-stream; charset=utf-8")
+        self.send_header("Cache-Control", "no-cache")
+        self.send_header("Connection", "keep-alive")
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.end_headers()
 
-        try:
-            result = asyncio.run(agent.write(
-                topic=topic,
-                content_type=content_type,
-                persona=persona,
-                keywords=keywords,
-                word_count=word_count,
-                language=language,
-                instructions=instructions,
-                save=True,
-            ))
-            return self._json_response(result)
-        except Exception as e:
-            return self._json_response({"error": str(e)}, status=500)
+        event_queue = queue.Queue()
+
+        def progress_callback(info):
+            event_queue.put({"type": "progress", **info})
+
+        def run_pipeline():
+            agent = CopywritingAgent(
+                llm_client=LLM_CLIENT, output_dir=str(ROOT_DIR / "output")
+            )
+            try:
+                result = asyncio.run(agent.write(
+                    topic=topic,
+                    content_type=content_type,
+                    persona=persona,
+                    keywords=keywords,
+                    word_count=word_count,
+                    language=language,
+                    instructions=instructions,
+                    save=True,
+                    progress_callback=progress_callback,
+                ))
+                event_queue.put({"type": "done", "result": result})
+            except Exception as e:
+                event_queue.put({"type": "error", "error": str(e)})
+
+        thread = threading.Thread(target=run_pipeline, daemon=True)
+        thread.start()
+
+        # Stream SSE events until done
+        while True:
+            try:
+                event = event_queue.get(timeout=300)
+                sse_data = json.dumps(event, ensure_ascii=False, default=str)
+                self.wfile.write(f"data: {sse_data}\n\n".encode("utf-8"))
+                self.wfile.flush()
+                if event["type"] in ("done", "error"):
+                    break
+            except queue.Empty:
+                event_queue.put({"type": "error", "error": "Timeout (5min)"})
+                break
 
     def _handle_analyze(self, data):
         """Analyse un contenu."""
