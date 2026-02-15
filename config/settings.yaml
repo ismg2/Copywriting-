@@ -3,14 +3,30 @@
 
 # LLM Settings
 llm:
-  # Provider: "anthropic" ou "openai"
-  provider: "anthropic"
-  # Modèle à utiliser
-  model: "claude-sonnet-4-20250514"
+  # Provider: "ollama", "anthropic", "openai" ou "auto"
+  # "auto" tente dans l'ordre : Ollama (local) > Anthropic > OpenAI
+  provider: "auto"
+
+  # Modèle à utiliser (exemples par provider)
+  # Ollama:    llama3.1, mistral, mixtral, codellama, gemma2, phi3, qwen2
+  # Anthropic: claude-sonnet-4-20250514
+  # OpenAI:    gpt-4, gpt-4o
+  model: "llama3.1"
+
   # Tokens max par appel
   max_tokens: 4096
+
   # Température (0.0 = déterministe, 1.0 = créatif)
   temperature: 0.7
+
+# Ollama Settings
+ollama:
+  # URL du serveur Ollama
+  base_url: "http://localhost:11434"
+  # Modèles recommandés pour le copywriting (par taille) :
+  #   - Petit  (3-4 GB) : phi3, gemma2:2b
+  #   - Moyen  (4-8 GB) : mistral, llama3.1, qwen2
+  #   - Grand  (16+ GB) : mixtral, llama3.1:70b, qwen2:72b
 
 # Defaults pour la génération
 defaults:

@@ -253,35 +253,15 @@ Ajoute en fin un bloc de métadonnées YAML avec:
             raise RuntimeError("Aucune session active. Appelez create_session() d'abord.")
 
     async def _call_llm(self, prompt: str) -> str:
-        """Appelle le LLM avec le prompt donné."""
+        """Appelle le LLM via l'interface unifiée .generate()."""
         if self.llm_client is None:
             return f"[LLM non configuré - Prompt généré]\n\n{prompt}"
 
-        # Support pour Anthropic SDK
-        if hasattr(self.llm_client, "messages"):
-            response = await self._call_anthropic(prompt)
-            return response
+        # Interface unifiée : tous les clients exposent .generate(prompt)
+        if hasattr(self.llm_client, "generate"):
+            return self.llm_client.generate(prompt)
 
-        # Support pour OpenAI SDK
-        if hasattr(self.llm_client, "chat"):
-            response = await self._call_openai(prompt)
-            return response
-
-        raise ValueError("Client LLM non supporté. Utilisez Anthropic ou OpenAI.")
-
-    async def _call_anthropic(self, prompt: str) -> str:
-        """Appel via le SDK Anthropic."""
-        response = self.llm_client.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=4096,
-            messages=[{"role": "user", "content": prompt}],
+        raise ValueError(
+            "Client LLM non supporté. Utilisez un client de src.agent.llm_clients "
+            "(OllamaClient, AnthropicClient, OpenAIClient)."
         )
-        return response.content[0].text
-
-    async def _call_openai(self, prompt: str) -> str:
-        """Appel via le SDK OpenAI."""
-        response = self.llm_client.chat.completions.create(
-            model="gpt-4",
-            messages=[{"role": "user", "content": prompt}],
-        )
-        return response.choices[0].message.content

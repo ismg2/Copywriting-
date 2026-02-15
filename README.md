@@ -30,56 +30,68 @@ main.py                    # CLI
 ## Installation
 
 ```bash
-# Cloner le repo
 git clone <repo-url>
 cd Copywriting-
-
-# Installer les dépendances
 pip install -e ".[all]"
+```
 
-# Configurer la clé API (au choix)
+## Configuration LLM
+
+3 options de provider, par ordre de priorité en mode auto :
+
+### Option 1 : Ollama (local, gratuit, sans clé API)
+```bash
+ollama serve                    # Démarrer le serveur
+ollama pull mistral             # Télécharger un modèle
+python main.py list-models      # Vérifier les modèles disponibles
+```
+
+### Option 2 : Anthropic
+```bash
 export ANTHROPIC_API_KEY="sk-ant-..."
-# ou
+```
+
+### Option 3 : OpenAI
+```bash
 export OPENAI_API_KEY="sk-..."
 ```
 
 ## Utilisation CLI
 
 ```bash
-# Générer un article
-python main.py write --topic "L'IA dans le marketing" --type article --persona expert_b2b
+# Avec Ollama (local, sans clé API)
+python main.py --provider ollama --model mistral write -t "L'IA dans le marketing"
+python main.py --provider ollama --model llama3.1 write -t "Guide SEO" -T blog
 
-# Générer un blog post
-python main.py write -t "10 astuces SEO" -T blog -p seo_specialist -k "SEO,référencement"
+# Auto-détection (Ollama > Anthropic > OpenAI)
+python main.py write -t "L'IA dans le marketing" -T blog -p blog_casual
 
-# Générer une étude de cas
-python main.py write -t "Migration cloud chez TechCorp" -T usecase -w 2000
+# Lister les modèles Ollama
+python main.py list-models
 
-# Lister les personas
+# Autres commandes
 python main.py list-personas
-
-# Analyser un contenu existant
 python main.py analyze --file output/article.md --keywords "IA,marketing"
 ```
 
 ## Utilisation Python
 
 ```python
-import asyncio
 from src.agent.writer import CopywritingAgent
+from src.agent.llm_clients import OllamaClient
 
-agent = CopywritingAgent()
+client = OllamaClient(model="mistral")
+agent = CopywritingAgent(llm_client=client)
 
+import asyncio
 result = asyncio.run(agent.write(
     topic="Comment l'IA transforme le marketing",
     content_type="blog",
     persona="blog_casual",
     keywords=["IA", "marketing"],
-    word_count=1200,
 ))
 
 print(result["content"])
-print(f"SEO: {result['analysis']['seo_score']}/100")
 ```
 
 ## Pipeline de rédaction
